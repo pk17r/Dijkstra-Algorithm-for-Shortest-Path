@@ -83,6 +83,7 @@ class CityGraph
 				}
 	}
 public:
+	float avg_dist_ = 0;
 	//test dataset constructor
 	CityGraph()
 	{
@@ -131,6 +132,8 @@ public:
 		//print connectivity matrix
 		PrintCityConnectivityMatrix();
 		PrintCityDistanceMatrix();
+		//call avg distance to origin city method
+		AvgPathLengthUsingDijkstrasAlgorithm();
 	}
 	//constructor
 	CityGraph(int size_, int density_) 
@@ -143,6 +146,11 @@ public:
 		//PrintCityConnectivityMatrix();
 		//PrintCityDistanceMatrix();
 		cout << "Generated City Graph with size " << size_ << " and density " << density_ << endl;
+		//print connectivity matrix
+		PrintCityConnectivityMatrix();
+		PrintCityDistanceMatrix();
+		//call avg distance to origin city method
+		AvgPathLengthUsingDijkstrasAlgorithm();
 	}
 	//destructor
 	~CityGraph() 
@@ -158,53 +166,65 @@ public:
 		if(density_ > 0) cout << " and density " << density_;
 		cout << " deleted.\n" << endl;
 	}
+	const int maxColsToShowPerPage = 13;
 	void PrintCityConnectivityMatrix()
 	{
-		cout << "Edges:\t";
-		for (int i = 0; i < size_; i++)
-			cout << "|   " << i << "\t";
-		cout << endl << "--------";
-		for (int i = 0; i < size_; i++)
-			cout << "|-------";
-		cout << endl;
-		for (int i = 0; i < size_; i++) {
-			cout << "   " << i << "\t";
-			for (int j = 0; j < size_; j++) 
-				if(i != j)
-					cout << "|    " << city_connectivity_matrix_[i][j] << "\t";
-				else
-					cout << "|    -\t";
+		int pages = size_ / maxColsToShowPerPage;
+		for (int p = 0; p <= pages; p++)
+		{
+			cout << "Edges:\t";
+			for (int i = p * maxColsToShowPerPage; i < min(size_ , (p + 1) * maxColsToShowPerPage); i++)
+				cout << "|   " << i << "\t";
+			cout << endl << "--------";
+			for (int i = p * maxColsToShowPerPage; i < min(size_, (p + 1) * maxColsToShowPerPage); i++)
+				cout << "|-------";
 			cout << endl;
-		}
-		cout << endl;
-	}
-	void PrintCityDistanceMatrix()
-	{
-		cout << "Dist:\t";
-		for (int i = 0; i < size_; i++)
-			cout << "|   " << i << "\t";
-		cout << endl << "--------";
-		for (int i = 0; i < size_; i++)
-			cout << "|-------";
-		cout << endl;
-		for (int i = 0; i < size_; i++) {
-			cout << "   " << i << "\t";
-			for (int j = 0; j < size_; j++) {
-				cout << "|  ";
-				if (i == j)
-					printf("  -");
-				else if (city_distance_matrix_[i][j] != 0)
-					if(city_distance_matrix_[i][j] >= 10)
-						printf("%0.1f", city_distance_matrix_[i][j]);
+			for (int i = 0; i < size_; i++) 
+			{
+				cout << "   " << i << "\t";
+				for (int j = p * maxColsToShowPerPage; j < min(size_, (p + 1) * maxColsToShowPerPage); j++)
+					if (i != j)
+						cout << "|    " << city_connectivity_matrix_[i][j] << "\t";
 					else
-						printf("%0.1f ", city_distance_matrix_[i][j]);
-				else
-					printf("  0");
-				cout << "\t";
+						cout << "|    -\t";
+				cout << endl;
 			}
 			cout << endl;
 		}
-		cout << endl;
+	}
+	void PrintCityDistanceMatrix()
+	{
+		int pages = size_ / maxColsToShowPerPage;
+		for (int p = 0; p <= pages; p++)
+		{
+			cout << "Dist:\t";
+			for (int i = p * maxColsToShowPerPage; i < min(size_, (p + 1) * maxColsToShowPerPage); i++)
+				cout << "|   " << i << "\t";
+			cout << endl << "--------";
+			for (int i = p * maxColsToShowPerPage; i < min(size_, (p + 1) * maxColsToShowPerPage); i++)
+				cout << "|-------";
+			cout << endl;
+			for (int i = 0; i < size_; i++) 
+			{
+				cout << "   " << i << "\t";
+				for (int j = p * maxColsToShowPerPage; j < min(size_, (p + 1) * maxColsToShowPerPage); j++) 
+				{
+					cout << "|  ";
+					if (i == j)
+						printf("  -");
+					else if (city_distance_matrix_[i][j] != 0)
+						if (city_distance_matrix_[i][j] >= 10)
+							printf("%0.1f", city_distance_matrix_[i][j]);
+						else
+							printf("%0.1f ", city_distance_matrix_[i][j]);
+					else
+						printf("  0");
+					cout << "\t";
+				}
+				cout << endl;
+			}
+			cout << endl;
+		}
 	}
 	int get_density_()
 	{
@@ -231,6 +251,7 @@ public:
 	{
 		return city_distance_matrix_[cityIndex][neighborIndex];
 	}
+	void AvgPathLengthUsingDijkstrasAlgorithm();
 };
 
 template <typename T>
@@ -246,19 +267,19 @@ void PrintOpenSet(T p)
 	cout << endl;
 }
 
-float AvgPathLengthUsingDijkstrasAlgorithm(CityGraph city_graph_object)
+void CityGraph::AvgPathLengthUsingDijkstrasAlgorithm()
 {
 	//define closed and open sets
 	vector<Neighbor> closed_set;
 	//using priority_queue to learn how to use it
 	auto cmpFn = [](Neighbor left, Neighbor right) {return left.distance > right.distance; };
 	priority_queue<Neighbor, vector<Neighbor>, decltype(cmpFn)> open_set(cmpFn);
-	
+
 	//dijkstras algorithm
 	//add origin city to closed set
 	closed_set.push_back(Neighbor(0, 0));
 	//add neighbors of origin city to open set
-	vector<Neighbor> current_neighbors = city_graph_object.GetNeighbors(0);
+	vector<Neighbor> current_neighbors = this->GetNeighbors(0);
 	for (Neighbor neighbor_city : current_neighbors)
 	{
 		neighbor_city.nearest_neighbor_index = 0;
@@ -271,7 +292,7 @@ float AvgPathLengthUsingDijkstrasAlgorithm(CityGraph city_graph_object)
 		open_set.pop();
 		closed_set.push_back(current_city);
 		//for each neighbor city of current city which is not in closed set
-		current_neighbors = city_graph_object.GetNeighbors(current_city.index);
+		current_neighbors = this->GetNeighbors(current_city.index);
 		for (Neighbor neighbor_city : current_neighbors)
 		{
 			bool found_neighbor_city_in_closed_set = false;
@@ -292,9 +313,9 @@ float AvgPathLengthUsingDijkstrasAlgorithm(CityGraph city_graph_object)
 					if (open_set_top.index == neighbor_city.index)
 					{
 						found_neighbor_city_in_open_set = true;
-						if (current_city.distance + city_graph_object.GetNeighborDistance(current_city.index, neighbor_city.index) < open_set_top.distance)
+						if (current_city.distance + this->GetNeighborDistance(current_city.index, neighbor_city.index) < open_set_top.distance)
 						{
-							open_set_top.distance = current_city.distance + city_graph_object.GetNeighborDistance(current_city.index, neighbor_city.index);
+							open_set_top.distance = current_city.distance + this->GetNeighborDistance(current_city.index, neighbor_city.index);
 							open_set_top.nearest_neighbor_index = current_city.index;
 						}
 					}
@@ -315,11 +336,10 @@ float AvgPathLengthUsingDijkstrasAlgorithm(CityGraph city_graph_object)
 		}
 	}
 	//calculate sum of distances of cities to origin city
-	float avg_dist = 0;
 	cout << "Dijkstras Algorithm Nearest City Paths and Distance to Origin:" << endl;
 	for (Neighbor city : closed_set)
 	{
-		avg_dist += city.distance / (closed_set.size() - 1);
+		this->avg_dist_ += city.distance / (closed_set.size() - 1);
 		if(city.nearest_neighbor_index >= 0)
 			printf("( %2d | %0.1f )", city.index, city.distance);
 		else
@@ -346,8 +366,12 @@ float AvgPathLengthUsingDijkstrasAlgorithm(CityGraph city_graph_object)
 		cout << endl;
 	}
 	cout << "(connected cities " << closed_set.size();
-	printf(" | avg path length %0.2f )\n", avg_dist);
-	return avg_dist;
+	printf(" | avg path length %0.2f )\n", this->avg_dist_);
+}
+
+void printResultLine(CityGraph& city_graph_object)
+{
+	printf("*\t%d\t|\t%d\t|\t%.2f\t*\n", city_graph_object.get_size_(), city_graph_object.get_density_(), city_graph_object.avg_dist_);
 }
 
 int main() 
@@ -355,21 +379,19 @@ int main()
 	cout << "\n**** Avg Path Length Using Dijkstras Algorithm ****" << endl << endl;
 	//test dataset
 	CityGraph city_graph_object;
-	float avg_dist = AvgPathLengthUsingDijkstrasAlgorithm(city_graph_object);
-
-	//create city graph object
-	int size = 50;
-	int density1 = 20;
-	CityGraph city_graph_object1(size, density1);
-	float avg_dist1 = AvgPathLengthUsingDijkstrasAlgorithm(city_graph_object1);
-
-	int density2 = 40;
-	CityGraph city_graph_object2(size, density2);
-	float avg_dist2 = AvgPathLengthUsingDijkstrasAlgorithm(city_graph_object2);
-
-	cout << "\nResults:" << endl;
-	cout << "size: " << size << ", density1: " << density1 << ", avg_dist1: " << avg_dist1 << endl;
-	cout << "size: " << size << ", density2: " << density2 << ", avg_dist2: " << avg_dist2 << endl;
+	//generate randomly generated city graph objects
+	CityGraph city_graph_object1(50, 20);
+	CityGraph city_graph_object2(50, 40);
+	//print results
+	cout << endl << endl;
+	for (int i = 0; i < 6; i++) cout << "********";
+	cout << "*" << endl;
+	cout << "*   Results of Randomly Generated City Graphs\t*" << endl;
+	cout << "*      size\t|     density\t|     avg dist\t*" << endl;
+	printResultLine(city_graph_object1);
+	printResultLine(city_graph_object2);
+	for (int i = 0; i < 6; i++) cout << "********";
+	cout << "*" << endl << endl;
 
 	return 0;
 }
